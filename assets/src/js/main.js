@@ -2,12 +2,12 @@ import '../sass/main.scss';
 
 import {
   select,
-  csv,
+  json,
   scaleLinear,
   max,
   scaleBand,
   axisLeft,
-  axisBottom
+  axisBottom,
 } from 'd3';
 
 const svg = select("svg")
@@ -16,8 +16,8 @@ const width = +svg.attr('width');
 const height = +svg.attr('height');
 
 const render = data => {
-  const Xvalue = d => d.population;
-  const Yvalue = d => d.country;
+  const Xvalue = d => d.height;
+  const Yvalue = d => d.name;
   const margin = { top: 20, right: 20, bottom: 20, left: 100 }
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
@@ -47,9 +47,12 @@ const render = data => {
     .attr('height', yScale.bandwidth())
 }
 
-csv("data.csv").then(data => {
-  data.forEach(d => {
-    d.population = +d.population * 1000;
+json("https://swapi.dev/api/people").then(data => {
+  const fetcheddata = data.results
+  fetcheddata.forEach(d => {
+    d.name = d.name
+    d.height = +d.height
   })
-  render(data)
+  console.log(fetcheddata)
+  render(fetcheddata)
 })
