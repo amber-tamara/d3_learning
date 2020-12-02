@@ -1,89 +1,55 @@
 import '../sass/main.scss';
 
-import { select, arc } from 'd3';
+import {
+  select,
+  csv,
+  scaleLinear,
+  max,
+  scaleBand,
+  axisLeft,
+  axisBottom
+} from 'd3';
 
-const svg = select('svg');
+const svg = select("svg")
 
-//Variable for the width and height
-//Extracting the height value from the html svg
-//+ is commonly used short hand for parseFloat()
-//and you can leave out the parenthesis,
-//which converts strings to a floating point number
+const width = +svg.attr('width');
 const height = +svg.attr('height');
-const width = window.innerWidth;
 
-//Variable 
-const eyeSpacingX = 100;
-const eyeSpacingY = -75;
-const eyeRadius = 35;
-const eyeBrowWidth = 50;
-const eyeBrowHeight = 15;
-const eyeBrowOffset = 30;
+const render = data => {
+  const Xvalue = d => d.population;
+  const Yvalue = d => d.country;
+  const margin = { top: 20, right: 20, bottom: 20, left: 100 }
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
 
-const g = svg
-  .append('g')
-  .attr('transform', `translate(${width / 2}, ${height / 2})`)
-  .on('mouseover', () => {
-    eyeBrowsGroup
-      .transition().duration(750)
-      .attr('transform', `translate(0, ${eyeBrowOffset - 30})`)
-      .transition().duration(750)
-      .attr('transform', `translate(0, ${eyeBrowOffset})`)
+  const xScale = scaleLinear()
+    .domain([0, max(data, Xvalue)])
+    .range([0, innerWidth])
+
+
+  const yScale = scaleBand()
+    .domain(data.map(Yvalue))
+    .range([0, innerHeight])
+    .padding(0.1)
+
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`)
+
+  g.append('g').call(axisLeft(yScale))
+  g.append('g').call(axisBottom(xScale))
+    .attr('transform', `translate(0, ${innerHeight})`)
+  console.log(innerHeight)
+
+  g.selectAll("rect").data(data)
+    .enter().append('rect')
+    .attr('y', d => yScale(Yvalue(d)))
+    .attr('width', d => xScale(Xvalue(d)))
+    .attr('height', yScale.bandwidth())
+}
+
+csv("data.csv").then(data => {
+  data.forEach(d => {
+    d.population = +d.population * 1000;
   })
-
-//Creating a circle, first argument is the atribute, second argument is the value
-//you can chain the attr because it returns the d3 selection it was called on,
-//which is called method chaining
-const circle = g
-  .append('circle')
-  .attr('r', height / 2)
-  .attr('fill', 'yellow')
-  .attr('stroke', 'black')
-
-
-const eyeGroup = g
-  .append('g')
-  .attr('transform', `translate(0, ${eyeSpacingY})`)
-
-//appending individual eyes into one group, called "eyeGroup"
-//Adding a radius
-//Postioning on the X axis
-const leftEyeCircle = eyeGroup
-  .append('circle')
-  .attr('r', eyeRadius)
-  .attr('cx', -eyeSpacingX)
-
-const rightEyeCircle = eyeGroup
-  .append('circle')
-  .attr('r', eyeRadius)
-  .attr('cx', eyeSpacingX)
-
-const eyeBrowsGroup = eyeGroup
-  .append('g')
-  .attr('transform', `translate(0, ${eyeBrowOffset})`)
-
-const leftEyeBrow = eyeBrowsGroup
-  .append('rect')
-  .attr('width', eyeBrowWidth)
-  .attr('height', eyeBrowHeight)
-  .attr('x', -eyeSpacingX - (eyeBrowWidth / 2))
-  .attr('y', eyeSpacingY - eyeBrowOffset)
-
-const eyes
-
-const rightEyeBrow = eyeBrowsGroup
-  .append('rect')
-  .attr('width', eyeBrowWidth)
-  .attr('height', eyeBrowHeight)
-  .attr('x', eyeSpacingX - (eyeBrowWidth / 2))
-  .attr('y', eyeSpacingY - eyeBrowOffset)
-
-const mouth = g
-  .append('path')
-  .attr('d', arc()({
-    innerRadius: 0,
-    outerRadius: 170,
-    startAngle: Math.PI / 2,
-    endAngle: Math.PI * 3 / 2
-  }))
-
+  render(data)
+})

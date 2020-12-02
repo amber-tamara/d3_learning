@@ -31083,31 +31083,51 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var d3__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! d3 */ "./node_modules/d3/index.js");
 
 
-var svg = Object(d3__WEBPACK_IMPORTED_MODULE_1__["select"])('svg');
-var height = +svg.attr('height');
-var width = window.innerWidth;
-var eyeSpacingX = 100;
-var eyeSpacingY = -75;
-var eyeRadius = 35;
-var eyeBrowWidth = 50;
-var eyeBrowHeight = 15;
-var eyeBrowOffset = 30;
-var g = svg.append('g').attr('transform', "translate(".concat(width / 2, ", ").concat(height / 2, ")")).on('mouseover', function () {
-  eyeBrowsGroup.transition().duration(750).attr('transform', "translate(0, ".concat(eyeBrowOffset - 30, ")")).transition().duration(750).attr('transform', "translate(0, ".concat(eyeBrowOffset, ")"));
-});
-var circle = g.append('circle').attr('r', height / 2).attr('fill', 'yellow').attr('stroke', 'black');
-var eyeGroup = g.append('g').attr('transform', "translate(0, ".concat(eyeSpacingY, ")"));
-var leftEyeCircle = eyeGroup.append('circle').attr('r', eyeRadius).attr('cx', -eyeSpacingX);
-var rightEyeCircle = eyeGroup.append('circle').attr('r', eyeRadius).attr('cx', eyeSpacingX);
-var eyeBrowsGroup = eyeGroup.append('g').attr('transform', "translate(0, ".concat(eyeBrowOffset, ")"));
-var leftEyeBrow = eyeBrowsGroup.append('rect').attr('width', eyeBrowWidth).attr('height', eyeBrowHeight).attr('x', -eyeSpacingX - eyeBrowWidth / 2).attr('y', eyeSpacingY - eyeBrowOffset);
-var rightEyeBrow = eyeBrowsGroup.append('rect').attr('width', eyeBrowWidth).attr('height', eyeBrowHeight).attr('x', eyeSpacingX - eyeBrowWidth / 2).attr('y', eyeSpacingY - eyeBrowOffset);
-var mouth = g.append('path').attr('d', Object(d3__WEBPACK_IMPORTED_MODULE_1__["arc"])()({
-  innerRadius: 0,
-  outerRadius: 170,
-  startAngle: Math.PI / 2,
-  endAngle: Math.PI * 3 / 2
-}));
+
+
+const svg = Object(d3__WEBPACK_IMPORTED_MODULE_1__["select"])("svg")
+
+const width = +svg.attr('width');
+const height = +svg.attr('height');
+
+const render = data => {
+  const Xvalue = d => d.population;
+  const Yvalue = d => d.country;
+  const margin = { top: 20, right: 20, bottom: 20, left: 100 }
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const xScale = Object(d3__WEBPACK_IMPORTED_MODULE_1__["scaleLinear"])()
+    .domain([0, Object(d3__WEBPACK_IMPORTED_MODULE_1__["max"])(data, Xvalue)])
+    .range([0, innerWidth])
+
+
+  const yScale = Object(d3__WEBPACK_IMPORTED_MODULE_1__["scaleBand"])()
+    .domain(data.map(Yvalue))
+    .range([0, innerHeight])
+    .padding(0.1)
+
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`)
+
+  g.append('g').call(Object(d3__WEBPACK_IMPORTED_MODULE_1__["axisLeft"])(yScale))
+  g.append('g').call(Object(d3__WEBPACK_IMPORTED_MODULE_1__["axisBottom"])(xScale))
+    .attr('transform', `translate(0, ${innerHeight})`)
+  console.log(innerHeight)
+
+  g.selectAll("rect").data(data)
+    .enter().append('rect')
+    .attr('y', d => yScale(Yvalue(d)))
+    .attr('width', d => xScale(Xvalue(d)))
+    .attr('height', yScale.bandwidth())
+}
+
+Object(d3__WEBPACK_IMPORTED_MODULE_1__["csv"])("data.csv").then(data => {
+  data.forEach(d => {
+    d.population = +d.population * 1000;
+  })
+  render(data)
+})
 
 /***/ }),
 
