@@ -169,13 +169,34 @@ __webpack_require__.r(__webpack_exports__);
         x1 = xz[1],
         tz = threshold(values, x0, x1);
 
-    // Convert number of thresholds into uniform thresholds,
-    // and nice the default domain accordingly.
+    // Convert number of thresholds into uniform thresholds, and nice the
+    // default domain accordingly.
     if (!Array.isArray(tz)) {
-      tz = +tz;
-      if (domain === _extent_js__WEBPACK_IMPORTED_MODULE_3__["default"]) [x0, x1] = Object(_nice_js__WEBPACK_IMPORTED_MODULE_5__["default"])(x0, x1, tz);
-      tz = Object(_ticks_js__WEBPACK_IMPORTED_MODULE_6__["default"])(x0, x1, tz);
-      if (tz[tz.length - 1] === x1) tz.pop(); // exclusive
+      const max = x1, tn = +tz;
+      if (domain === _extent_js__WEBPACK_IMPORTED_MODULE_3__["default"]) [x0, x1] = Object(_nice_js__WEBPACK_IMPORTED_MODULE_5__["default"])(x0, x1, tn);
+      tz = Object(_ticks_js__WEBPACK_IMPORTED_MODULE_6__["default"])(x0, x1, tn);
+
+      // If the last threshold is coincident with the domain’s upper bound, the
+      // last bin will be zero-width. If the default domain is used, and this
+      // last threshold is coincident with the maximum input value, we can
+      // extend the niced upper bound by one tick to ensure uniform bin widths;
+      // otherwise, we simply remove the last threshold. Note that we don’t
+      // coerce values or the domain to numbers, and thus must be careful to
+      // compare order (>=) rather than strict equality (===)!
+      if (tz[tz.length - 1] >= x1) {
+        if (max >= x1 && domain === _extent_js__WEBPACK_IMPORTED_MODULE_3__["default"]) {
+          const step = Object(_ticks_js__WEBPACK_IMPORTED_MODULE_6__["tickIncrement"])(x0, x1, tn);
+          if (isFinite(step)) {
+            if (step > 0) {
+              x1 = (Math.floor(x1 / step) + 1) * step;
+            } else if (step < 0) {
+              x1 = (Math.ceil(x1 * -step) + 1) / -step;
+            }
+          }
+        } else {
+          tz.pop();
+        }
+      }
     }
 
     // Remove any thresholds outside the domain.
@@ -1826,11 +1847,18 @@ function some(values, test) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return sort; });
 /* harmony import */ var _ascending_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./ascending.js */ "./node_modules/d3-array/src/ascending.js");
+/* harmony import */ var _permute_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./permute.js */ "./node_modules/d3-array/src/permute.js");
 
 
-function sort(values, comparator = _ascending_js__WEBPACK_IMPORTED_MODULE_0__["default"]) {
+
+function sort(values, f = _ascending_js__WEBPACK_IMPORTED_MODULE_0__["default"]) {
   if (typeof values[Symbol.iterator] !== "function") throw new TypeError("values is not iterable");
-  return Array.from(values).sort(comparator);
+  values = Array.from(values);
+  if (f.length === 1) {
+    f = values.map(f);
+    return Object(_permute_js__WEBPACK_IMPORTED_MODULE_1__["default"])(values, values.map((d, i) => i).sort((i, j) => Object(_ascending_js__WEBPACK_IMPORTED_MODULE_0__["default"])(f[i], f[j])));
+  }
+  return values.sort(f);
 }
 
 
@@ -29382,7 +29410,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "devDependencies", function() { return devDependencies; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dependencies", function() { return dependencies; });
 var name = "d3";
-var version = "6.2.0";
+var version = "6.3.1";
 var description = "Data-Driven Documents";
 var keywords = ["dom","visualization","svg","animation","canvas"];
 var homepage = "https://d3js.org";
@@ -31091,46 +31119,75 @@ const width = +svg.attr('width');
 const height = +svg.attr('height');
 
 const render = data => {
-  const Xvalue = d => d.height;
-  const Yvalue = d => d.name;
-  const margin = { top: 20, right: 20, bottom: 20, left: 100 }
+  const Xvalue = d => d.population;
+  const Yvalue = d => d.country;
+  const margin = { top: 60, right: 20, bottom: 77, left: 180 }
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
   const xScale = Object(d3__WEBPACK_IMPORTED_MODULE_1__["scaleLinear"])()
     .domain([0, Object(d3__WEBPACK_IMPORTED_MODULE_1__["max"])(data, Xvalue)])
     .range([0, innerWidth])
+    .nice()
 
 
-  const yScale = Object(d3__WEBPACK_IMPORTED_MODULE_1__["scaleBand"])()
+  const yScale = Object(d3__WEBPACK_IMPORTED_MODULE_1__["scalePoint"])()
     .domain(data.map(Yvalue))
     .range([0, innerHeight])
-    .padding(0.1)
+    .padding(0.7)
 
   const g = svg.append('g')
     .attr('transform', `translate(${margin.left},${margin.top})`)
 
-  g.append('g').call(Object(d3__WEBPACK_IMPORTED_MODULE_1__["axisLeft"])(yScale))
-  g.append('g').call(Object(d3__WEBPACK_IMPORTED_MODULE_1__["axisBottom"])(xScale))
-    .attr('transform', `translate(0, ${innerHeight})`)
-  console.log(innerHeight)
+  const aAxisTickFormat = number =>
+    Object(d3__WEBPACK_IMPORTED_MODULE_1__["format"])(".3s")(number)
+      .replace('G', 'B')
 
-  g.selectAll("rect").data(data)
-    .enter().append('rect')
-    .attr('y', d => yScale(Yvalue(d)))
-    .attr('width', d => xScale(Xvalue(d)))
-    .attr('height', yScale.bandwidth())
+  const xAxis = Object(d3__WEBPACK_IMPORTED_MODULE_1__["axisBottom"])(xScale)
+    .tickFormat(aAxisTickFormat)
+    .tickSize(-innerHeight)
+
+  const yAxis = Object(d3__WEBPACK_IMPORTED_MODULE_1__["axisLeft"])(yScale)
+    .tickSize(-innerWidth)
+
+  g.append('g')
+    .call(yAxis)
+    .selectAll('.domain')
+    .remove();
+
+  const xAxisG = g.append('g').call(xAxis)
+    .attr('transform', `translate(0, ${innerHeight})`)
+
+
+  xAxisG.select('.domain').remove();
+
+  xAxisG.append('text')
+    .attr('class', "axis-label")
+    .attr('y', 65)
+    .attr('x', innerWidth / 2)
+    .attr("fill", "black")
+    .text('Population')
+
+  g.selectAll("circle").data(data)
+    .enter().append('circle')
+    .attr('cy', d => yScale(Yvalue(d)))
+    .attr('cx', d => xScale(Xvalue(d)))
+    .attr('r', 17);
+
+  g.append('text')
+    .attr("class", "title")
+    .attr('y', -10)
+    .text('Top 10 Most Popular Countries')
 }
 
-Object(d3__WEBPACK_IMPORTED_MODULE_1__["json"])("https://swapi.dev/api/people").then(data => {
-  const fetcheddata = data.results
-  fetcheddata.forEach(d => {
-    d.name = d.name
-    d.height = +d.height
+Object(d3__WEBPACK_IMPORTED_MODULE_1__["csv"])("data.csv").then(data => {
+  data.forEach(d => {
+    d.population = +d.population * 1000
   })
-  console.log(fetcheddata)
-  render(fetcheddata)
+  console.log(data)
+  render(data)
 })
+
 
 /***/ }),
 
